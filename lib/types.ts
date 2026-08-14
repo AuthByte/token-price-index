@@ -119,10 +119,16 @@ export type ChartWeek = {
   volumes: Record<string, number>;
 };
 
+export type LabShare = {
+  provider: string;
+  weight: number;
+};
+
 export type HistoryPoint = {
   date: string;
   index: number;
   blendedPerMillion: number;
   tokens: number;
   modelsPriced: number;
+  shares: LabShare[];
 };
