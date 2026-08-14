@@ -56,16 +56,20 @@ describe("computeIndex", () => {
       ],
     });
 
-    // 10M cheap tokens at $0.13/M blended + 1M dear tokens at $4.20/M
-    // cheap blended = (9e6*1e-7 + 1e6*4e-7)/1e7 * 1e6 = 0.13
-    // dear blended = (9e5*3e-6 + 1e5*1.5e-5)/1e6 * 1e6 = 4.20
-    // spend = 10e6/1e6*0.13 + 1e6/1e6*4.20 = 1.30 + 4.20 = 5.50
-    // tokens = 11e6, blended = 5.50 / 11 = 0.50
     assert.equal(snapshot.paid.tokens, 11_000_000);
     assert.ok(Math.abs(snapshot.paid.blendedPerMillion - 0.5) < 1e-9);
     assert.ok(Math.abs(snapshot.paid.index - 50) < 1e-6);
     assert.equal(snapshot.constituents[0]?.slug, "cheap/flash-20260101");
     assert.ok(Math.abs((snapshot.constituents[0]?.weight ?? 0) - 10 / 11) < 1e-9);
+    assert.equal(snapshot.providers.length, 2);
+    const cheapLab = snapshot.providers.find((row) => row.provider === "cheap");
+    const dearLab = snapshot.providers.find((row) => row.provider === "dear");
+    assert.ok(cheapLab);
+    assert.ok(dearLab);
+    assert.ok(Math.abs(cheapLab.index - 13) < 1e-6);
+    assert.ok(Math.abs(dearLab.index - 420) < 1e-6);
+    assert.ok(Math.abs(cheapLab.weight - 10 / 11) < 1e-9);
+    assert.ok(Math.abs(dearLab.spendWeight - 4.2 / 5.5) < 1e-9);
   });
 
   it("drops free endpoints from the headline basket", () => {
@@ -173,7 +177,6 @@ describe("computeHistory", () => {
 
     assert.equal(points.length, 2);
     assert.equal(points[0]?.date, "2025-08-18");
-    // 0.9 * 3e-6 + 0.1 * 15e-6 = 4.2e-6 per token = $4.20 / M = index 420
     assert.ok(Math.abs((points[0]?.index ?? 0) - 420) < 1e-6);
     assert.ok((points[1]?.index ?? 0) < (points[0]?.index ?? 0));
   });
