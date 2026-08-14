@@ -4,6 +4,7 @@ import type {
   ChartWeek,
   Constituent,
   HistoryPoint,
+  LabShare,
   ModelRecord,
   ProviderShare,
   RankingRow,
@@ -312,6 +313,7 @@ export function computeHistory({
       index: blendedPerMillion * INDEX_SCALE,
       tokens,
       modelsPriced,
+      shares: [],
     });
   }
 
@@ -320,4 +322,74 @@ export function computeHistory({
 
 export function dollarsToIndex(perMillion: number): number {
   return (perMillion / INDEX_DOLLARS_PER_MILLION) * INDEX_SCALE;
+}
+
+const MAX_NAMED_SHARE_LABS = 7;
+
+export function pickShareOrder(weeks: ChartWeek[]): string[] {
+  const totals = new Map<string, number>();
+  for (const week of weeks) {
+    for (const [provider, tokens] of Object.entries(week.volumes)) {
+      if (provider === "others" || provider === "Others") {
+        continue;
+      }
+      totals.set(provider, (totals.get(provider) ?? 0) + tokens);
+    }
+  }
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, MAX_NAMED_SHARE_LABS)
+    .map(([provider]) => provider)
+    .concat("others");
+}
+
+export function sharesFromModelWeeks(weeks: ChartWeek[]): ChartWeek[] {
+  return weeks.map((week) => {
+    const volumes: Record<string, number> = {};
+    for (const [slug, tokens] of Object.entries(week.volumes)) {
+      const provider = providerFromSlug(slug);
+      volumes[provider] = (volumes[provider] ?? 0) + tokens;
+    }
+    return { date: week.date, volumes };
+  });
+}
+
+export function attachWeeklyShares(
+  history: HistoryPoint[],
+  shareWeeks: ChartWeek[],
+): HistoryPoint[] {
+  if (history.length === 0 || shareWeeks.length === 0) {
+    return history;
+  }
+
+  const byDate = new Map(shareWeeks.map((week) => [week.date, week.volumes]));
+  const order = pickShareOrder(shareWeeks);
+
+  return history.map((point) => {
+    const volumes = byDate.get(point.date);
+    const empty = order.map((provider) => ({ provider, weight: 0 }));
+    if (!volumes) {
+      return { ...point, shares: empty };
+    }
+
+    const total = Object.values(volumes).reduce((sum, tokens) => sum + tokens, 0);
+    if (total <= 0) {
+      return { ...point, shares: empty };
+    }
+
+    const shares: LabShare[] = order.map((provider) => ({
+      provider,
+      weight: provider === "others" ? 0 : (volumes[provider] ?? 0) / total,
+    }));
+    const namedWeight = shares.reduce(
+      (sum, row) => sum + (row.provider === "others" ? 0 : row.weight),
+      0,
+    );
+    const others = shares.find((row) => row.provider === "others");
+    if (others) {
+      others.weight = Math.max(0, 1 - namedWeight);
+    }
+
+    return { ...point, shares };
+  });
 }

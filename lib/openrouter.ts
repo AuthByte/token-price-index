@@ -1,8 +1,9 @@
-import { parseChartWeeks, parseModelRecord, parseOpenRouterList, parseRankingRow } from "./parse";
+import { parseChartWeeks, parseModelRecord, parseOpenRouterList, parseRankingRow, parseShareWeeks } from "./parse";
 import type { ChartWeek, ModelRecord, RankingRow } from "./types";
 
 const RANKINGS_URL = "https://openrouter.ai/api/frontend/v1/rankings/models";
 const CHART_URL = "https://openrouter.ai/api/frontend/v1/rankings/model-rankings-chart";
+const SHARE_URL = "https://openrouter.ai/api/frontend/v1/rankings/market-share";
 const MODELS_URL = "https://openrouter.ai/api/v1/models";
 const USER_AGENT =
   "TokenPriceIndex/1.0 (https://github.com/AuthByte/token-price-index)";
@@ -59,4 +60,9 @@ export async function fetchChartWeeks(): Promise<ChartWeek[]> {
     throw new Error("OpenRouter rankings chart returned no usable weeks");
   }
   return weeks;
+}
+
+export async function fetchMarketShare(): Promise<ChartWeek[]> {
+  const payload = await fetchJson(SHARE_URL);
+  return parseShareWeeks(payload);
 }

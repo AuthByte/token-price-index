@@ -1,27 +1,9 @@
 import { formatIndex, formatPercent, formatPerMillion, formatUsd } from "@/lib/format";
+import { colorForLab, labelForLab } from "@/lib/labs";
 import type { ProviderShare } from "@/lib/types";
 
-const LABELS: Record<string, string> = {
-  anthropic: "Anthropic",
-  deepseek: "DeepSeek",
-  google: "Google",
-  meta: "Meta",
-  "meta-llama": "Meta",
-  minimax: "MiniMax",
-  mistralai: "Mistral",
-  moonshotai: "Moonshot",
-  nvidia: "NVIDIA",
-  openai: "OpenAI",
-  qwen: "Qwen",
-  stepfun: "StepFun",
-  tencent: "Tencent",
-  "x-ai": "xAI",
-  xiaomi: "Xiaomi",
-  "z-ai": "Z.ai",
-};
-
 function labelFor(provider: string): string {
-  return LABELS[provider] ?? provider;
+  return labelForLab(provider);
 }
 
 export function Houses({ providers }: { providers: ProviderShare[] }) {
@@ -52,10 +34,10 @@ export function Houses({ providers }: { providers: ProviderShare[] }) {
           <div
             key={row.provider}
             title={`${labelFor(row.provider)} ${formatPercent(row.weight)} of tokens`}
-            className="h-full bg-copper"
+            className="h-full"
             style={{
               width: `${row.weight * 100}%`,
-              opacity: 0.35 + row.weight * 0.65,
+              background: colorForLab(row.provider),
             }}
           />
         ))}

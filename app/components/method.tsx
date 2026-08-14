@@ -55,10 +55,11 @@ export function Method({
           <p>
             The year chart takes OpenRouter’s weekly named series, the same
             lines on their rankings page, and prices that mix at today’s
-            catalog. It is not a historical sticker tape. Models that left the
-            catalog drop out of that week. The long-tail Others bucket is
-            omitted because it has no price. The headline TPI above uses the
-            full paid basket, so it sits higher than the chart’s last dot.
+            catalog. It is not a historical sticker tape. Hover a week to see
+            that day’s TPI. The colored stack under it is author market share
+            for the same weeks, including the long-tail Others bucket the
+            price line has to skip. The headline TPI above uses the full paid
+            basket, so it sits higher than the chart’s last dot.
           </p>
         </div>
         <div className="space-y-6">

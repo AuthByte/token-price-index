@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { computeHistory, computeIndex } from "./compute-index.ts";
+import { attachWeeklyShares, computeHistory, computeIndex, pickShareOrder } from "./compute-index.ts";
 import type { ModelRecord, RankingRow } from "./types.ts";
 
 function row(partial: Partial<RankingRow> & Pick<RankingRow, "modelPermaslug" | "variantPermaslug" | "promptTokens" | "completionTokens">): RankingRow {
@@ -56,6 +56,11 @@ describe("computeIndex", () => {
       ],
     });
 
+    // 10M cheap tokens at $0.13/M blended + 1M dear tokens at $4.20/M
+    // cheap blended = (9e6*1e-7 + 1e6*4e-7)/1e7 * 1e6 = 0.13
+    // dear blended = (9e5*3e-6 + 1e5*1.5e-5)/1e6 * 1e6 = 4.20
+    // spend = 10e6/1e6*0.13 + 1e6/1e6*4.20 = 1.30 + 4.20 = 5.50
+    // tokens = 11e6, blended = 5.50 / 11 = 0.50
     assert.equal(snapshot.paid.tokens, 11_000_000);
     assert.ok(Math.abs(snapshot.paid.blendedPerMillion - 0.5) < 1e-9);
     assert.ok(Math.abs(snapshot.paid.index - 50) < 1e-6);
@@ -177,6 +182,7 @@ describe("computeHistory", () => {
 
     assert.equal(points.length, 2);
     assert.equal(points[0]?.date, "2025-08-18");
+    // 0.9 * 3e-6 + 0.1 * 15e-6 = 4.2e-6 per token = $4.20 / M = index 420
     assert.ok(Math.abs((points[0]?.index ?? 0) - 420) < 1e-6);
     assert.ok((points[1]?.index ?? 0) < (points[0]?.index ?? 0));
   });
@@ -213,5 +219,51 @@ describe("computeHistory", () => {
 
     assert.equal(points[0]?.index, 200);
     assert.equal(points[0]?.tokens, 1_000_000);
+  });
+});
+
+describe("attachWeeklyShares", () => {
+  it("turns lab volumes into 100 percent stacks and parks the tail in others", () => {
+    const history = computeHistory({
+      promptShare: 1,
+      models: [
+        {
+          id: "deepseek/flash",
+          canonicalSlug: "deepseek/flash",
+          name: "Flash",
+          promptPrice: 0.0000001,
+          completionPrice: 0.0000001,
+        },
+      ],
+      weeks: [
+        { date: "2026-01-01", volumes: { "deepseek/flash": 1_000_000 } },
+        { date: "2026-01-08", volumes: { "deepseek/flash": 1_000_000 } },
+      ],
+    });
+
+    const points = attachWeeklyShares(history, [
+      {
+        date: "2026-01-01",
+        volumes: { deepseek: 60, anthropic: 30, google: 10 },
+      },
+      {
+        date: "2026-01-08",
+        volumes: { deepseek: 80, anthropic: 10, others: 10, tiny: 5 },
+      },
+    ]);
+
+    assert.deepEqual(pickShareOrder([
+      { date: "2026-01-01", volumes: { deepseek: 60, anthropic: 30, google: 10 } },
+      { date: "2026-01-08", volumes: { deepseek: 80, anthropic: 10, others: 10, tiny: 5 } },
+    ]), ["deepseek", "anthropic", "google", "tiny", "others"]);
+
+    const last = points[1];
+    assert.ok(last);
+    const deepseek = last.shares.find((row) => row.provider === "deepseek");
+    const others = last.shares.find((row) => row.provider === "others");
+    assert.ok(Math.abs((deepseek?.weight ?? 0) - 80 / 105) < 1e-9);
+    assert.ok(Math.abs((others?.weight ?? 0) - 10 / 105) < 1e-9);
+    const sum = last.shares.reduce((total, row) => total + row.weight, 0);
+    assert.ok(Math.abs(sum - 1) < 1e-9);
   });
 });
