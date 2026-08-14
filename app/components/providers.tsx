@@ -1,4 +1,4 @@
-import { formatPercent, formatUsd } from "@/lib/format";
+import { formatIndex, formatPercent, formatPerMillion, formatUsd } from "@/lib/format";
 import type { ProviderShare } from "@/lib/types";
 
 const LABELS: Record<string, string> = {
@@ -24,24 +24,34 @@ function labelFor(provider: string): string {
   return LABELS[provider] ?? provider;
 }
 
-export function Providers({ providers }: { providers: ProviderShare[] }) {
+export function Houses({ providers }: { providers: ProviderShare[] }) {
   const top = providers.slice(0, 8);
-  const restWeight = providers.slice(8).reduce((sum, row) => sum + row.weight, 0);
+  const volumeLead = top[0];
+  const spendLead = [...top].sort((a, b) => b.spendWeight - a.spendWeight)[0];
 
   return (
     <section className="border-t border-rule pt-10">
-      <div className="flex items-end justify-between gap-6">
-        <h2 className="display text-3xl italic sm:text-4xl">Who moves the number</h2>
-        <p className="hidden max-w-sm text-right text-sm text-ink-soft sm:block">
-          Share of paid tokens in the basket. Cheap high-volume labs pull the
-          index down. Frontier houses still own the spend.
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="display text-3xl italic sm:text-4xl">The houses</h2>
+          <p className="mt-2 max-w-xl text-sm text-ink-soft">
+            Each lab’s own TPI, weighted by the tokens it actually sold.
+            {volumeLead && spendLead
+              ? ` ${labelFor(volumeLead.provider)} moves the volume. ${labelFor(spendLead.provider)} still collects the rent.`
+              : ""}
+          </p>
+        </div>
+        <p className="hidden max-w-xs text-right text-sm text-ink-soft lg:block">
+          We do not pick a champion. The mix does. Token share and spend share
+          are different stories.
         </p>
       </div>
+
       <div className="mt-8 flex h-4 w-full overflow-hidden bg-paper-2">
         {top.map((row) => (
           <div
             key={row.provider}
-            title={`${labelFor(row.provider)} ${formatPercent(row.weight)}`}
+            title={`${labelFor(row.provider)} ${formatPercent(row.weight)} of tokens`}
             className="h-full bg-copper"
             style={{
               width: `${row.weight * 100}%`,
@@ -49,21 +59,23 @@ export function Providers({ providers }: { providers: ProviderShare[] }) {
             }}
           />
         ))}
-        {restWeight > 0 ? (
-          <div
-            className="h-full bg-ink"
-            style={{ width: `${restWeight * 100}%`, opacity: 0.18 }}
-          />
-        ) : null}
       </div>
-      <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+      <ul className="mt-8 grid gap-px bg-rule sm:grid-cols-2 lg:grid-cols-4">
         {top.map((row) => (
-          <li key={row.provider} className="flex items-baseline justify-between gap-3 border-b border-rule pb-2">
-            <span>{labelFor(row.provider)}</span>
-            <span className="font-mono text-sm text-ink-soft">
-              {formatPercent(row.weight)}
-              <span className="ml-2 text-[11px]">{formatUsd(row.spendUsd)}</span>
-            </span>
+          <li key={row.provider} className="bg-paper px-4 py-5">
+            <p className="text-xs tracking-[0.18em] uppercase text-ink-soft">
+              {labelFor(row.provider)}
+            </p>
+            <p className="display mt-2 text-4xl italic leading-none">{formatIndex(row.index)}</p>
+            <p className="mt-3 font-mono text-[11px] text-ink-soft">
+              ${formatPerMillion(row.blendedPerMillion)} / M
+            </p>
+            <p className="mt-4 flex justify-between gap-3 border-t border-rule pt-3 font-mono text-[11px] text-ink-soft">
+              <span>{formatPercent(row.weight)} tokens</span>
+              <span>{formatPercent(row.spendWeight)} spend</span>
+            </p>
+            <p className="mt-1 font-mono text-[11px] text-ink-soft">{formatUsd(row.spendUsd)}</p>
           </li>
         ))}
       </ul>

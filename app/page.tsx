@@ -1,8 +1,9 @@
+import { ComputeMeter } from "./components/compute-meter";
 import { Constituents } from "./components/constituents";
 import { Hero } from "./components/hero";
 import { IndexChart } from "./components/index-chart";
 import { Method } from "./components/method";
-import { Providers } from "./components/providers";
+import { Houses } from "./components/providers";
 import { formatAsOf, formatPerMillion } from "@/lib/format";
 import { getIndexSnapshot } from "@/lib/get-index";
 
@@ -38,10 +39,12 @@ export default async function Home() {
           {formatPerMillion(snapshot.all.blendedPerMillion)} / M.
         </p>
 
-        <Providers providers={snapshot.providers} />
+        <Houses providers={snapshot.providers} />
+        {snapshot.compute ? <ComputeMeter compute={snapshot.compute} /> : null}
         <Constituents rows={snapshot.constituents} />
         <Method
           all={snapshot.all}
+          compute={snapshot.compute}
           matchedModels={snapshot.matchedModels}
           unmatchedModels={snapshot.unmatchedModels}
         />
@@ -49,7 +52,9 @@ export default async function Home() {
 
       <footer className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-ink pt-4 text-xs text-ink-soft">
         <p>
-          Source: {snapshot.source}. Refreshed {new Date(snapshot.fetchedAt).toUTCString()}.
+          Source: {snapshot.source}
+          {snapshot.compute ? `. Compute: ${snapshot.compute.source}.` : "."} Refreshed{" "}
+          {new Date(snapshot.fetchedAt).toUTCString()}.
         </p>
         <a className="underline decoration-copper/60 underline-offset-4" href="/api/index">
           JSON

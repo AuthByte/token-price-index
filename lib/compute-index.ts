@@ -238,12 +238,21 @@ export function computeIndex({
   }
 
   const providers: ProviderShare[] = [...providerMap.entries()]
-    .map(([provider, value]) => ({
-      provider,
-      tokens: value.tokens,
-      spendUsd: value.spendUsd,
-      weight: paid.tokens > 0 ? value.tokens / paid.tokens : 0,
-    }))
+    .map(([provider, value]) => {
+      const blendedPerMillion =
+        value.tokens > 0
+          ? (value.spendUsd / value.tokens) * TOKENS_PER_MILLION
+          : 0;
+      return {
+        provider,
+        tokens: value.tokens,
+        spendUsd: value.spendUsd,
+        weight: paid.tokens > 0 ? value.tokens / paid.tokens : 0,
+        spendWeight: paid.spendUsd > 0 ? value.spendUsd / paid.spendUsd : 0,
+        blendedPerMillion,
+        index: blendedPerMillion * INDEX_SCALE,
+      };
+    })
     .sort((a, b) => b.tokens - a.tokens);
 
   return {
