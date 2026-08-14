@@ -101,3 +101,38 @@ export function parseOpenRouterList(payload: unknown): unknown[] {
   }
   return readUnknownArray(payload.data);
 }
+
+export function parseChartWeeks(payload: unknown) {
+  if (!isRecord(payload)) {
+    return [];
+  }
+
+  const nested = isRecord(payload.data) ? payload.data : payload;
+  const rows = readUnknownArray(nested.data);
+  const weeks: Array<{ date: string; volumes: Record<string, number> }> = [];
+
+  for (const row of rows) {
+    if (!isRecord(row)) {
+      continue;
+    }
+    const date = readString(row.x);
+    if (date === null || !isRecord(row.ys)) {
+      continue;
+    }
+    const volumes: Record<string, number> = {};
+    for (const [slug, raw] of Object.entries(row.ys)) {
+      if (slug === "Others") {
+        continue;
+      }
+      const tokens = readNumber(raw);
+      if (tokens !== null && tokens > 0) {
+        volumes[slug] = tokens;
+      }
+    }
+    if (Object.keys(volumes).length > 0) {
+      weeks.push({ date, volumes });
+    }
+  }
+
+  return weeks;
+}

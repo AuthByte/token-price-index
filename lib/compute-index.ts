@@ -1,7 +1,9 @@
 import type {
   BasketStats,
+  IndexBasket,
+  ChartWeek,
   Constituent,
-  IndexSnapshot,
+  HistoryPoint,
   ModelRecord,
   ProviderShare,
   RankingRow,
@@ -17,11 +19,11 @@ export function providerFromSlug(slug: string): string {
   return slash === -1 ? slug : slug.slice(0, slash);
 }
 
-function lookupKeys(row: RankingRow): string[] {
-  const keys = [row.variantPermaslug, row.modelPermaslug];
-  const colon = row.variantPermaslug.lastIndexOf(":");
+function slugKeys(slug: string): string[] {
+  const keys = [slug];
+  const colon = slug.lastIndexOf(":");
   if (colon > 0) {
-    keys.push(row.variantPermaslug.slice(0, colon));
+    keys.push(slug.slice(0, colon));
   }
   for (const key of [...keys]) {
     const stripped = key.replace(/-\d{8}$/, "");
@@ -30,6 +32,10 @@ function lookupKeys(row: RankingRow): string[] {
     }
   }
   return keys;
+}
+
+function lookupKeys(row: RankingRow): string[] {
+  return [...slugKeys(row.variantPermaslug), ...slugKeys(row.modelPermaslug)];
 }
 
 export function buildModelIndex(models: ModelRecord[]): Map<string, ModelRecord> {
@@ -48,6 +54,19 @@ function findModel(
   models: Map<string, ModelRecord>,
 ): ModelRecord | null {
   for (const key of lookupKeys(row)) {
+    const match = models.get(key);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+}
+
+function findModelBySlug(
+  slug: string,
+  models: Map<string, ModelRecord>,
+): ModelRecord | null {
+  for (const key of slugKeys(slug)) {
     const match = models.get(key);
     if (match) {
       return match;
@@ -144,7 +163,7 @@ export function computeIndex({
   rankings: RankingRow[];
   models: ModelRecord[];
   fetchedAt: string;
-}): IndexSnapshot {
+}): IndexBasket {
   const catalog = buildModelIndex(models);
   const rows: Omit<Constituent, "weight">[] = [];
   let unmatchedModels = 0;
@@ -238,6 +257,56 @@ export function computeIndex({
     providers,
     constituents,
   };
+}
+
+export function computeHistory({
+  weeks,
+  models,
+  promptShare,
+}: {
+  weeks: ChartWeek[];
+  models: ModelRecord[];
+  promptShare: number;
+}): HistoryPoint[] {
+  const catalog = buildModelIndex(models);
+  const share = promptShare > 0 && promptShare < 1 ? promptShare : 0.97;
+  const points: HistoryPoint[] = [];
+
+  for (const week of weeks) {
+    let spendUsd = 0;
+    let tokens = 0;
+    let modelsPriced = 0;
+
+    for (const [slug, volume] of Object.entries(week.volumes)) {
+      const model = findModelBySlug(slug, catalog);
+      if (!model) {
+        continue;
+      }
+      if (slug.includes(":free") || (model.promptPrice === 0 && model.completionPrice === 0)) {
+        continue;
+      }
+      const pricePerToken =
+        share * model.promptPrice + (1 - share) * model.completionPrice;
+      spendUsd += volume * pricePerToken;
+      tokens += volume;
+      modelsPriced += 1;
+    }
+
+    if (tokens <= 0) {
+      continue;
+    }
+
+    const blendedPerMillion = (spendUsd / tokens) * TOKENS_PER_MILLION;
+    points.push({
+      date: week.date,
+      blendedPerMillion,
+      index: blendedPerMillion * INDEX_SCALE,
+      tokens,
+      modelsPriced,
+    });
+  }
+
+  return points;
 }
 
 export function dollarsToIndex(perMillion: number): number {

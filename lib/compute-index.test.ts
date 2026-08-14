@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { computeIndex } from "./compute-index.ts";
+import { computeHistory, computeIndex } from "./compute-index.ts";
 import type { ModelRecord, RankingRow } from "./types.ts";
 
 function row(partial: Partial<RankingRow> & Pick<RankingRow, "modelPermaslug" | "variantPermaslug" | "promptTokens" | "completionTokens">): RankingRow {
@@ -136,5 +136,79 @@ describe("computeIndex", () => {
 
     assert.equal(snapshot.matchedModels, 0);
     assert.equal(snapshot.paid.index, 0);
+  });
+});
+
+describe("computeHistory", () => {
+  it("rebuilds weekly TPI from named volumes and current prices", () => {
+    const points = computeHistory({
+      promptShare: 0.9,
+      models: [
+        model({
+          id: "dear/opus",
+          canonicalSlug: "dear/opus-20260101",
+          name: "Opus",
+          promptPrice: 0.000003,
+          completionPrice: 0.000015,
+        }),
+        model({
+          id: "cheap/flash",
+          canonicalSlug: "cheap/flash-20260101",
+          name: "Flash",
+          promptPrice: 0.0000001,
+          completionPrice: 0.0000004,
+        }),
+      ],
+      weeks: [
+        {
+          date: "2025-08-18",
+          volumes: { "dear/opus-20260101": 1_000_000 },
+        },
+        {
+          date: "2026-08-10",
+          volumes: { "cheap/flash-20260101": 9_000_000, "dear/opus-20260101": 1_000_000 },
+        },
+      ],
+    });
+
+    assert.equal(points.length, 2);
+    assert.equal(points[0]?.date, "2025-08-18");
+    // 0.9 * 3e-6 + 0.1 * 15e-6 = 4.2e-6 per token = $4.20 / M = index 420
+    assert.ok(Math.abs((points[0]?.index ?? 0) - 420) < 1e-6);
+    assert.ok((points[1]?.index ?? 0) < (points[0]?.index ?? 0));
+  });
+
+  it("skips free series so they cannot flatten the line", () => {
+    const points = computeHistory({
+      promptShare: 1,
+      models: [
+        model({
+          id: "lab/free",
+          canonicalSlug: "lab/free-20260101",
+          name: "Free",
+          promptPrice: 0,
+          completionPrice: 0,
+        }),
+        model({
+          id: "lab/paid",
+          canonicalSlug: "lab/paid-20260101",
+          name: "Paid",
+          promptPrice: 0.000002,
+          completionPrice: 0.000002,
+        }),
+      ],
+      weeks: [
+        {
+          date: "2026-01-01",
+          volumes: {
+            "lab/free-20260101:free": 50_000_000,
+            "lab/paid-20260101": 1_000_000,
+          },
+        },
+      ],
+    });
+
+    assert.equal(points[0]?.index, 200);
+    assert.equal(points[0]?.tokens, 1_000_000);
   });
 });

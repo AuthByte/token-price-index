@@ -1,5 +1,6 @@
 import { Constituents } from "./components/constituents";
 import { Hero } from "./components/hero";
+import { IndexChart } from "./components/index-chart";
 import { Method } from "./components/method";
 import { Providers } from "./components/providers";
 import { formatAsOf, formatPerMillion } from "@/lib/format";
@@ -27,6 +28,7 @@ export default async function Home() {
 
       <main className="flex flex-1 flex-col gap-16 pt-12 pb-8">
         <Hero asOf={asOf} paid={snapshot.paid} />
+        <IndexChart points={snapshot.history} />
 
         <p className="max-w-3xl text-lg leading-relaxed">
           Most of the world’s tokens now cost pocket change. DeepSeek and Hy3

@@ -36,7 +36,7 @@ export type Constituent = {
   free: boolean;
 };
 
-export type IndexSnapshot = {
+export type IndexBasket = {
   asOf: string;
   fetchedAt: string;
   source: string;
@@ -46,6 +46,10 @@ export type IndexSnapshot = {
   all: BasketStats;
   providers: ProviderShare[];
   constituents: Constituent[];
+};
+
+export type IndexSnapshot = IndexBasket & {
+  history: HistoryPoint[];
 };
 
 export type BasketStats = {
@@ -66,4 +70,17 @@ export type ProviderShare = {
   tokens: number;
   spendUsd: number;
   weight: number;
+};
+
+export type ChartWeek = {
+  date: string;
+  volumes: Record<string, number>;
+};
+
+export type HistoryPoint = {
+  date: string;
+  index: number;
+  blendedPerMillion: number;
+  tokens: number;
+  modelsPriced: number;
 };
