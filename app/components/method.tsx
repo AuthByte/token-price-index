@@ -37,6 +37,14 @@ export function Method({
             Tokenizers differ by provider, so a “token” here is whatever that
             lab counted, not a universal atom.
           </p>
+          <p>
+            The year chart takes OpenRouter’s weekly named series, the same
+            lines on their rankings page, and prices that mix at today’s
+            catalog. It is not a historical sticker tape. Models that left the
+            catalog drop out of that week. The long-tail Others bucket is
+            omitted because it has no price. The headline TPI above uses the
+            full paid basket, so it sits higher than the chart’s last dot.
+          </p>
         </div>
         <div className="border border-rule bg-paper-2/40 p-6 font-mono text-[13px] leading-7">
           <p className="tracking-[0.16em] uppercase text-ink-soft">Formula</p>
