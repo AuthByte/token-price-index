@@ -50,6 +50,7 @@ export type IndexBasket = {
 
 export type IndexSnapshot = IndexBasket & {
   history: HistoryPoint[];
+  compute: ComputeIndex | null;
 };
 
 export type BasketStats = {
@@ -70,6 +71,47 @@ export type ProviderShare = {
   tokens: number;
   spendUsd: number;
   weight: number;
+  spendWeight: number;
+  blendedPerMillion: number;
+  index: number;
+};
+
+export type GpuOffer = {
+  provider: string;
+  gpu: string;
+  vramGb: number;
+  usdHr: number;
+  kind: string;
+};
+
+export type GpuSnapshot = {
+  date: string;
+  generatedAt: string;
+  offers: GpuOffer[];
+};
+
+export type ComputeQuote = {
+  provider: string;
+  usdHr: number;
+  gpu: string;
+  kind: string;
+};
+
+export type ComputeSeries = {
+  gpu: string;
+  label: string;
+  usdHr: number;
+  index: number;
+  providersPriced: number;
+  quotes: ComputeQuote[];
+};
+
+export type ComputeIndex = {
+  asOf: string;
+  fetchedAt: string;
+  source: string;
+  headline: ComputeSeries;
+  series: ComputeSeries[];
 };
 
 export type ChartWeek = {
