@@ -1,5 +1,7 @@
 import { cacheLife } from "next/cache";
+import { computeGpuIndex } from "./compute-gpu";
 import { computeHistory, computeIndex } from "./compute-index";
+import { fetchGpuSnapshot } from "./gpu-prices";
 import { fetchChartWeeks, fetchModels, fetchRankings } from "./openrouter";
 import type { IndexSnapshot } from "./types";
 
@@ -7,10 +9,11 @@ export async function getIndexSnapshot(): Promise<IndexSnapshot> {
   "use cache";
   cacheLife("hours");
 
-  const [rankings, models, weeks] = await Promise.all([
+  const [rankings, models, weeks, gpu] = await Promise.all([
     fetchRankings(),
     fetchModels(),
     fetchChartWeeks(),
+    fetchGpuSnapshot().catch(() => null),
   ]);
 
   const snapshot = computeIndex({
@@ -31,5 +34,6 @@ export async function getIndexSnapshot(): Promise<IndexSnapshot> {
       models,
       promptShare,
     }),
+    compute: gpu ? computeGpuIndex(gpu) : null,
   };
 }

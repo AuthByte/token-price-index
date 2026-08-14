@@ -96,6 +96,13 @@ export function formatShortDate(value: string): string {
   });
 }
 
+export function formatUsdHr(value: number): string {
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function formatPrice(value: number): string {
   if (value === 0) {
     return "0";
